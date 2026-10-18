@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0d0d0d">
+  <title>Buscador AFINAZONE</title>
+  <meta name="description" content="Consulta de publicaciones, compatibilidades vehiculares y números de parte de AFINAZONE.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Iconos (se reutilizan con <use>) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="8" cy="8" r="1.6" fill="currentColor"/></symbol>
+    <symbol id="i-car" viewBox="0 0 24 24"><path d="M4 16v-4l2-5a2 2 0 0 1 1.9-1.4h8.2A2 2 0 0 1 18 7l2 5v4M4 16h16M4 16v2.5M20 16v2.5M4 12h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7.5" cy="14" r="1" fill="currentColor"/><circle cx="16.5" cy="14" r="1" fill="currentColor"/></symbol>
+    <symbol id="i-part" viewBox="0 0 24 24"><path d="M12 2.8 20 7.4v9.2L12 21.2 4 16.6V7.4Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.6-4.5M4 4v4h4M4 13a8 8 0 0 0 14.6 4.5M20 20v-4h-4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="i-open" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2.5 20h19Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 10v4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1.1" fill="currentColor"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  </svg>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <span class="brand-name">AFINAZONE</span>
+        <span class="brand-sub">Buscador de publicaciones</span>
+      </div>
+      <div class="data-status">
+        <span id="status" class="status is-loading" role="status" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span><span id="status-text">Cargando datos…</span>
+        </span>
+        <button id="refresh" class="btn btn-quiet btn-sm" type="button" title="Descargar de nuevo los datos de la hoja">
+          <svg class="ico" aria-hidden="true"><use href="#i-refresh"/></svg><span>Actualizar</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="banner" class="banner" role="alert" hidden>
+      <svg class="ico" aria-hidden="true"><use href="#i-alert"/></svg>
+      <span id="banner-text"></span>
+      <button id="banner-retry" class="btn btn-sm" type="button" hidden>Reintentar</button>
+    </div>
+
+    <!-- Selector de método de búsqueda: tres opciones equivalentes -->
+    <h1 class="sr-only">Buscador de publicaciones AFINAZONE</h1>
+    <div class="modes" role="tablist" aria-label="Método de búsqueda">
+      <button class="mode" role="tab" id="tab-btn-pub" data-mode="pub" aria-selected="true" aria-controls="panel-pub">
+        <span class="mode-ico" aria-hidden="true"><svg><use href="#i-tag"/></svg></span>
+        <span class="mode-text">
+          <span class="mode-title">Por publicación</span>
+          <span class="mode-desc">Número, código MLM o enlace</span>
+        </span>
+      </button>
+      <button class="mode" role="tab" id="tab-btn-veh" data-mode="veh" aria-selected="false" aria-controls="panel-veh" tabindex="-1">
+        <span class="mode-ico" aria-hidden="true"><svg><use href="#i-car"/></svg></span>
+        <span class="mode-text">
+          <span class="mode-title">Por vehículo</span>
+          <span class="mode-desc">Marca, modelo, año, motor o aceite</span>
+        </span>
+      </button>
+      <button class="mode" role="tab" id="tab-btn-part" data-mode="part" aria-selected="false" aria-controls="panel-part" tabindex="-1">
+        <span class="mode-ico" aria-hidden="true"><svg><use href="#i-part"/></svg></span>
+        <span class="mode-text">
+          <span class="mode-title">Por número de parte</span>
+          <span class="mode-desc">Uno o varios códigos, como OMF-003</span>
+        </span>
+      </button>
+    </div>
+
+    <!-- A. Por publicación -->
+    <section class="panel" id="panel-pub" role="tabpanel" aria-labelledby="tab-btn-pub">
+      <label class="field-label" for="q-pub">ID o enlace de publicación</label>
+      <div class="searchbox">
+        <svg class="searchbox-ico" aria-hidden="true"><use href="#i-search"/></svg>
+        <input id="q-pub" type="search" inputmode="text" autocomplete="off" spellcheck="false" enterkeyhint="search"
+               aria-describedby="hint-pub" placeholder="748972582, MLM748972582 o el enlace de Mercado Libre">
+        <button class="clear-btn" type="button" data-clear="q-pub" aria-label="Borrar búsqueda" hidden>
+          <svg aria-hidden="true"><use href="#i-x"/></svg>
+        </button>
+      </div>
+      <p class="hint" id="hint-pub">Consulta Mercado Libre y, cuando están capturados, ASIN de Amazon, Web AFZ, Web OCF y referencias de venta directa.</p>
+    </section>
+
+    <!-- B. Por vehículo -->
+    <section class="panel" id="panel-veh" role="tabpanel" aria-labelledby="tab-btn-veh" hidden>
+      <div class="filters-slot" data-slot="veh"></div>
+    </section>
+
+    <!-- C. Por número de parte -->
+    <section class="panel" id="panel-part" role="tabpanel" aria-labelledby="tab-btn-part" hidden>
+      <label class="field-label" for="q-part">Número de parte</label>
+      <div class="searchbox">
+        <svg class="searchbox-ico" aria-hidden="true"><use href="#i-search"/></svg>
+        <input id="q-part" type="search" list="part-list" autocomplete="off" spellcheck="false" enterkeyhint="search"
+               aria-describedby="hint-part" placeholder="OMF-003">
+        <button class="clear-btn" type="button" data-clear="q-part" aria-label="Borrar número de parte" hidden>
+          <svg aria-hidden="true"><use href="#i-x"/></svg>
+        </button>
+      </div>
+      <datalist id="part-list"></datalist>
+      <p class="hint" id="hint-part">Escribe el código completo. Para ver publicaciones que llevan varias piezas a la vez, sepáralas con coma: OMF-001, OMJ-001.</p>
+
+      <details class="disclosure" id="part-catalog">
+        <summary>
+          <svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg>
+          <span class="disclosure-title">Explorar catálogo de números de parte</span>
+          <span class="disclosure-aside">Toca un código para buscarlo</span>
+        </summary>
+        <div id="part-catalog-body" class="catalog-body"></div>
+      </details>
+
+      <details class="disclosure refine" id="part-refine">
+        <summary>
+          <svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg>
+          <span class="disclosure-title">Limitar por vehículo</span>
+          <span class="tag-optional">Opcional</span>
+          <span id="part-refine-count" class="count-badge" hidden></span>
+        </summary>
+        <div class="filters-slot" data-slot="part"></div>
+      </details>
+    </section>
+
+    <!-- Filtros compartidos (se mueven entre "Por vehículo" y "Limitar por vehículo") -->
+    <template id="filters-template">
+      <form class="filters" id="filters" autocomplete="off" onsubmit="return false">
+        <fieldset class="fgroup fgroup-main">
+          <legend>Datos del vehículo</legend>
+          <div class="fgrid">
+            <label class="f"><span class="f-label">Marca</span><select data-field="marca"></select></label>
+            <label class="f"><span class="f-label">Modelo</span><select data-field="modelo"></select></label>
+            <label class="f">
+              <span class="f-label">Año</span>
+              <input id="f-year" type="number" inputmode="numeric" min="1990" max="2100" step="1" placeholder="Ej. 2014" aria-describedby="hint-year">
+            </label>
+            <label class="f"><span class="f-label">Motor</span><select data-field="motor"></select></label>
+            <label class="f"><span class="f-label">Transmisión</span><select data-field="trans"></select></label>
+          </div>
+          <p class="hint hint-sm" id="hint-year">El año se compara con el rango de cada publicación (año inicial a año final).</p>
+        </fieldset>
+
+        <fieldset class="fgroup fgroup-extra">
+          <legend>Filtros complementarios <span class="tag-optional">Opcional</span></legend>
+          <div class="fgrid">
+            <label class="f"><span class="f-label">Clasificación del producto</span><select data-field="clas"></select></label>
+            <label class="f"><span class="f-label">Marca de aceite</span><select data-field="marcaAc"></select></label>
+            <label class="f"><span class="f-label">Especificación de aceite</span><select data-field="espAc"></select></label>
+            <label class="f f-wide">
+              <span class="f-label">Palabras en la descripción</span>
+              <input id="f-text" type="search" placeholder="Ej. enfriador, motul, 7l" enterkeyhint="search">
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="filters-foot">
+          <label class="check">
+            <input id="f-noyear" type="checkbox">
+            <span>Incluir publicaciones sin años registrados <span class="muted">(aceites)</span></span>
+          </label>
+          <div class="filters-actions">
+            <span id="f-active" class="f-active" aria-live="polite"></span>
+            <button class="btn btn-sm" type="button" id="f-clear">
+              <svg class="ico" aria-hidden="true"><use href="#i-x"/></svg><span>Limpiar filtros</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </template>
+
+    <section class="results-area" aria-label="Resultados">
+      <div id="summary" class="summary" aria-live="polite"></div>
+      <div id="results" class="results"></div>
+      <div class="more-wrap"><button id="more" class="btn" type="button" hidden>Mostrar más</button></div>
+    </section>
+  </main>
+
+  <footer class="footer wrap">
+    <details id="quality" class="disclosure quality" hidden>
+      <summary>
+        <svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg>
+        <span class="disclosure-title">Calidad de datos de la hoja</span>
+        <span id="quality-count" class="count-badge count-badge-muted"></span>
+      </summary>
+      <div id="quality-body" class="quality-body"></div>
+    </details>
+    <p class="foot-note" id="foot-note"></p>
+  </footer>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <script src="config.js"></script>
+  <script src="core.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
