@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <meta name="theme-color" content="#0d0d0d">
+  <meta name="theme-color" content="#121214">
   <title>Buscador AFINAZONE</title>
   <meta name="description" content="Consulta de publicaciones, compatibilidades vehiculares y números de parte de AFINAZONE.">
   <link rel="stylesheet" href="styles.css">
@@ -19,6 +19,7 @@
     <symbol id="i-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
     <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.6-4.5M4 4v4h4M4 13a8 8 0 0 0 14.6 4.5M20 20v-4h-4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v14m0 0-6-6m6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
     <symbol id="i-open" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2.5 20h19Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 10v4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1.1" fill="currentColor"/></symbol>
@@ -26,11 +27,14 @@
     <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
   </svg>
 
+  <a class="skip" href="#results-area">Saltar a los resultados</a>
+
   <header class="topbar">
     <div class="topbar-inner">
       <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
         <span class="brand-name">AFINAZONE</span>
-        <span class="brand-sub">Buscador de publicaciones</span>
+        <span class="brand-sub">Buscador de recetas</span>
       </div>
       <div class="data-status">
         <span id="status" class="status is-loading" role="status" aria-live="polite">
@@ -50,93 +54,137 @@
       <button id="banner-retry" class="btn btn-sm" type="button" hidden>Reintentar</button>
     </div>
 
-    <!-- Selector de método de búsqueda: tres opciones equivalentes -->
-    <h1 class="sr-only">Buscador de publicaciones AFINAZONE</h1>
-    <div class="modes" role="tablist" aria-label="Método de búsqueda">
-      <button class="mode" role="tab" id="tab-btn-pub" data-mode="pub" aria-selected="true" aria-controls="panel-pub">
-        <span class="mode-ico" aria-hidden="true"><svg><use href="#i-tag"/></svg></span>
-        <span class="mode-text">
-          <span class="mode-title">Por publicación</span>
-          <span class="mode-desc">Número, código MLM o enlace</span>
-        </span>
-      </button>
-      <button class="mode" role="tab" id="tab-btn-veh" data-mode="veh" aria-selected="false" aria-controls="panel-veh" tabindex="-1">
-        <span class="mode-ico" aria-hidden="true"><svg><use href="#i-car"/></svg></span>
-        <span class="mode-text">
-          <span class="mode-title">Por vehículo</span>
-          <span class="mode-desc">Marca, modelo, año, motor o aceite</span>
-        </span>
-      </button>
-      <button class="mode" role="tab" id="tab-btn-part" data-mode="part" aria-selected="false" aria-controls="panel-part" tabindex="-1">
-        <span class="mode-ico" aria-hidden="true"><svg><use href="#i-part"/></svg></span>
-        <span class="mode-text">
-          <span class="mode-title">Por número de parte</span>
-          <span class="mode-desc">Uno o varios códigos, como OMF-003</span>
-        </span>
-      </button>
+    <div class="intro">
+      <h1>¿Qué necesitas buscar?</h1>
+      <p>Elige cómo buscar, escribe el dato y revisa los resultados abajo.</p>
     </div>
 
-    <!-- A. Por publicación -->
-    <section class="panel" id="panel-pub" role="tabpanel" aria-labelledby="tab-btn-pub">
+    <!-- Paso 1: método de búsqueda (tres opciones equivalentes) -->
+    <section class="step" aria-labelledby="step1-title">
+      <div class="step-head">
+        <span class="step-n is-done" data-step="1" aria-hidden="true"><span class="step-num">1</span><svg><use href="#i-check"/></svg></span>
+        <h2 id="step1-title">Elige cómo buscar</h2>
+      </div>
+      <div class="modes" role="tablist" aria-label="Método de búsqueda">
+        <button class="mode" role="tab" id="tab-btn-pub" data-mode="pub" aria-selected="true" aria-controls="panel-pub">
+          <span class="mode-ico" aria-hidden="true"><svg><use href="#i-tag"/></svg></span>
+          <span class="mode-text">
+            <span class="mode-title">Por publicación</span>
+            <span class="mode-desc">Número, código MLM o enlace</span>
+          </span>
+          <svg class="mode-check" aria-hidden="true"><use href="#i-check"/></svg>
+        </button>
+        <button class="mode" role="tab" id="tab-btn-veh" data-mode="veh" aria-selected="false" aria-controls="panel-veh" tabindex="-1">
+          <span class="mode-ico" aria-hidden="true"><svg><use href="#i-car"/></svg></span>
+          <span class="mode-text">
+            <span class="mode-title">Por vehículo</span>
+            <span class="mode-desc">Marca, modelo, año o motor</span>
+          </span>
+          <svg class="mode-check" aria-hidden="true"><use href="#i-check"/></svg>
+        </button>
+        <button class="mode" role="tab" id="tab-btn-part" data-mode="part" aria-selected="false" aria-controls="panel-part" tabindex="-1">
+          <span class="mode-ico" aria-hidden="true"><svg><use href="#i-part"/></svg></span>
+          <span class="mode-text">
+            <span class="mode-title">Por número de parte</span>
+            <span class="mode-desc">Uno o varios códigos OM</span>
+          </span>
+          <svg class="mode-check" aria-hidden="true"><use href="#i-check"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- Paso 2A: por publicación -->
+    <section class="panel" id="panel-pub" role="tabpanel" aria-labelledby="step2-pub">
+      <div class="step-head">
+        <span class="step-n" data-step="2" aria-hidden="true"><span class="step-num">2</span><svg><use href="#i-check"/></svg></span>
+        <h2 id="step2-pub">Escribe el ID o pega el enlace</h2>
+      </div>
       <label class="field-label" for="q-pub">ID o enlace de publicación</label>
       <div class="searchbox">
         <svg class="searchbox-ico" aria-hidden="true"><use href="#i-search"/></svg>
         <input id="q-pub" type="search" inputmode="text" autocomplete="off" spellcheck="false" enterkeyhint="search"
-               aria-describedby="hint-pub" placeholder="748972582, MLM748972582 o el enlace de Mercado Libre">
+               aria-describedby="hint-pub" placeholder="Ej. 748972582 o MLM748972582">
         <button class="clear-btn" type="button" data-clear="q-pub" aria-label="Borrar búsqueda" hidden>
           <svg aria-hidden="true"><use href="#i-x"/></svg>
         </button>
       </div>
-      <p class="hint" id="hint-pub">Consulta Mercado Libre y, cuando están capturados, ASIN de Amazon, Web AFZ, Web OCF y referencias de venta directa.</p>
+      <p class="hint" id="hint-pub">También acepta el enlace de Mercado Libre y el ASIN de Amazon.</p>
+      <div class="cta-row">
+        <p class="cta-hint" data-cta-hint aria-live="polite"></p>
+        <button class="btn btn-primary" type="button" data-cta disabled>Ver resultados</button>
+      </div>
     </section>
 
-    <!-- B. Por vehículo -->
-    <section class="panel" id="panel-veh" role="tabpanel" aria-labelledby="tab-btn-veh" hidden>
+    <!-- Paso 2B: por vehículo -->
+    <section class="panel" id="panel-veh" role="tabpanel" aria-labelledby="step2-veh" hidden>
+      <div class="step-head">
+        <span class="step-n" data-step="2" aria-hidden="true"><span class="step-num">2</span><svg><use href="#i-check"/></svg></span>
+        <h2 id="step2-veh">Describe el vehículo</h2>
+        <span class="step-aside">Llena solo lo que sepas</span>
+      </div>
       <div class="filters-slot" data-slot="veh"></div>
+      <div class="cta-row">
+        <p class="cta-hint" data-cta-hint aria-live="polite"></p>
+        <button class="btn btn-primary" type="button" data-cta disabled>Ver resultados</button>
+      </div>
     </section>
 
-    <!-- C. Por número de parte -->
-    <section class="panel" id="panel-part" role="tabpanel" aria-labelledby="tab-btn-part" hidden>
+    <!-- Paso 2C: por número de parte -->
+    <section class="panel" id="panel-part" role="tabpanel" aria-labelledby="step2-part" hidden>
+      <div class="step-head">
+        <span class="step-n" data-step="2" aria-hidden="true"><span class="step-num">2</span><svg><use href="#i-check"/></svg></span>
+        <h2 id="step2-part">Escribe el número de parte</h2>
+      </div>
       <label class="field-label" for="q-part">Número de parte</label>
       <div class="searchbox">
         <svg class="searchbox-ico" aria-hidden="true"><use href="#i-search"/></svg>
         <input id="q-part" type="search" list="part-list" autocomplete="off" spellcheck="false" enterkeyhint="search"
-               aria-describedby="hint-part" placeholder="OMF-003">
+               aria-describedby="hint-part" placeholder="Ej. OMF-003">
         <button class="clear-btn" type="button" data-clear="q-part" aria-label="Borrar número de parte" hidden>
           <svg aria-hidden="true"><use href="#i-x"/></svg>
         </button>
       </div>
       <datalist id="part-list"></datalist>
-      <p class="hint" id="hint-part">Escribe el código completo. Para ver publicaciones que llevan varias piezas a la vez, sepáralas con coma: OMF-001, OMJ-001.</p>
+      <p class="hint" id="hint-part">Código completo. Para varias piezas a la vez, sepáralas con coma.</p>
 
       <details class="disclosure" id="part-catalog">
         <summary>
           <svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg>
-          <span class="disclosure-title">Explorar catálogo de números de parte</span>
-          <span class="disclosure-aside">Toca un código para buscarlo</span>
+          <span class="disclosure-title">No sé el código: ver catálogo</span>
         </summary>
         <div id="part-catalog-body" class="catalog-body"></div>
       </details>
 
-      <details class="disclosure refine" id="part-refine">
+      <details class="disclosure" id="part-refine">
         <summary>
           <svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg>
           <span class="disclosure-title">Limitar por vehículo</span>
           <span class="tag-optional">Opcional</span>
           <span id="part-refine-count" class="count-badge" hidden></span>
         </summary>
-        <div class="filters-slot" data-slot="part"></div>
+        <div class="disclosure-body filters-slot" data-slot="part"></div>
       </details>
+
+      <div class="cta-row">
+        <p class="cta-hint" data-cta-hint aria-live="polite"></p>
+        <button class="btn btn-primary" type="button" data-cta disabled>Ver resultados</button>
+      </div>
     </section>
 
     <!-- Filtros compartidos (se mueven entre "Por vehículo" y "Limitar por vehículo") -->
     <template id="filters-template">
       <form class="filters" id="filters" autocomplete="off" onsubmit="return false">
-        <fieldset class="fgroup fgroup-main">
-          <legend>Datos del vehículo</legend>
+        <fieldset class="chunk">
+          <legend>Marca y modelo</legend>
           <div class="fgrid">
             <label class="f"><span class="f-label">Marca</span><select data-field="marca"></select></label>
             <label class="f"><span class="f-label">Modelo</span><select data-field="modelo"></select></label>
+          </div>
+        </fieldset>
+
+        <fieldset class="chunk">
+          <legend>Año, motor y transmisión</legend>
+          <div class="fgrid fgrid-3">
             <label class="f">
               <span class="f-label">Año</span>
               <input id="f-year" type="number" inputmode="numeric" min="1990" max="2100" step="1" placeholder="Ej. 2014" aria-describedby="hint-year">
@@ -144,38 +192,48 @@
             <label class="f"><span class="f-label">Motor</span><select data-field="motor"></select></label>
             <label class="f"><span class="f-label">Transmisión</span><select data-field="trans"></select></label>
           </div>
-          <p class="hint hint-sm" id="hint-year">El año se compara con el rango de cada publicación (año inicial a año final).</p>
+          <p class="hint" id="hint-year">El año se compara con el rango de cada publicación.</p>
         </fieldset>
 
-        <fieldset class="fgroup fgroup-extra">
-          <legend>Filtros complementarios <span class="tag-optional">Opcional</span></legend>
-          <div class="fgrid">
-            <label class="f"><span class="f-label">Clasificación del producto</span><select data-field="clas"></select></label>
-            <label class="f"><span class="f-label">Marca de aceite</span><select data-field="marcaAc"></select></label>
-            <label class="f"><span class="f-label">Especificación de aceite</span><select data-field="espAc"></select></label>
-            <label class="f f-wide">
-              <span class="f-label">Palabras en la descripción</span>
-              <input id="f-text" type="search" placeholder="Ej. enfriador, motul, 7l" enterkeyhint="search">
+        <details class="disclosure more-filters" id="f-more">
+          <summary>
+            <svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg>
+            <span class="disclosure-title">Más filtros</span>
+            <span class="tag-optional">Producto, aceite y palabras</span>
+            <span id="f-more-count" class="count-badge" hidden></span>
+          </summary>
+          <div class="disclosure-body">
+            <div class="fgrid">
+              <label class="f"><span class="f-label">Clasificación del producto</span><select data-field="clas"></select></label>
+              <label class="f"><span class="f-label">Marca de aceite</span><select data-field="marcaAc"></select></label>
+              <label class="f"><span class="f-label">Especificación de aceite</span><select data-field="espAc"></select></label>
+              <label class="f">
+                <span class="f-label">Palabras en la descripción</span>
+                <input id="f-text" type="search" placeholder="Ej. enfriador, motul" enterkeyhint="search">
+              </label>
+            </div>
+            <label class="check">
+              <input id="f-noyear" type="checkbox">
+              <span>Incluir publicaciones sin años registrados (aceites)</span>
             </label>
           </div>
-        </fieldset>
+        </details>
 
         <div class="filters-foot">
-          <label class="check">
-            <input id="f-noyear" type="checkbox">
-            <span>Incluir publicaciones sin años registrados <span class="muted">(aceites)</span></span>
-          </label>
-          <div class="filters-actions">
-            <span id="f-active" class="f-active" aria-live="polite"></span>
-            <button class="btn btn-sm" type="button" id="f-clear">
-              <svg class="ico" aria-hidden="true"><use href="#i-x"/></svg><span>Limpiar filtros</span>
-            </button>
-          </div>
+          <span id="f-active" class="f-active" aria-live="polite"></span>
+          <button class="btn btn-sm btn-quiet" type="button" id="f-clear">
+            <svg class="ico" aria-hidden="true"><use href="#i-x"/></svg><span>Limpiar filtros</span>
+          </button>
         </div>
       </form>
     </template>
 
-    <section class="results-area" aria-label="Resultados">
+    <!-- Paso 3: resultados -->
+    <section class="step results-area" id="results-area" aria-labelledby="step3-title" tabindex="-1">
+      <div class="step-head">
+        <span class="step-n" data-step="3" aria-hidden="true"><span class="step-num">3</span><svg><use href="#i-check"/></svg></span>
+        <h2 id="step3-title">Revisa los resultados</h2>
+      </div>
       <div id="summary" class="summary" aria-live="polite"></div>
       <div id="results" class="results"></div>
       <div class="more-wrap"><button id="more" class="btn" type="button" hidden>Mostrar más</button></div>
