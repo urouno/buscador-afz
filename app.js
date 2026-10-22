@@ -27,6 +27,8 @@
     fetching: false,
     loadError: null,
     lastPartQ: undefined,
+    vehAll: false,          // "Ver todo el recetario" sin filtros (por vehículo)
+    breakdownOpen: false,   // "Afinar resultados" abierto o cerrado
   };
 
   const $ = (sel, el) => (el || document).querySelector(sel);
@@ -186,18 +188,34 @@
   let toastT;
   function toast(msg) {
     const t = $('#toast');
-    t.textContent = msg; t.hidden = false;
-    clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 1900);
+    t.innerHTML = icon('check', '') + '<span>' + esc(msg) + '</span>';
+    t.hidden = false;
+    clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 1800);
   }
 
-  async function copyText(text) {
+  /** Copia y confirma en el mismo botón (palomita + "Copiado") además del aviso. */
+  async function copyText(text, btn) {
     try { await navigator.clipboard.writeText(text); }
     catch (e) {
       const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
       try { document.execCommand('copy'); } catch (e2) { /* nada */ }
       ta.remove();
     }
+    if (btn) {
+      const prev = btn.innerHTML;
+      btn.classList.add('is-done');
+      btn.innerHTML = icon('check', '') + 'Copiado';
+      setTimeout(() => { btn.classList.remove('is-done'); btn.innerHTML = prev; }, 1600);
+    }
     toast('Copiado: ' + text);
+  }
+
+  /** Lleva la vista a los resultados (acción principal del paso 2). */
+  function goToResults() {
+    const area = $('#results-area');
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    area.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    area.focus({ preventScroll: true });
   }
 
   /* ================================================================== */
@@ -232,7 +250,11 @@
     }));
     [$('#q-pub'), $('#q-part')].forEach((inp) => inp.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && inp.value) { e.preventDefault(); inp.value = ''; inp.dispatchEvent(new Event('input')); }
+      if (e.key === 'Enter') { e.preventDefault(); enterToResults(inp); }
     }));
+    $$('[data-cta]').forEach((b) => b.addEventListener('click', goToResults));
+    // Recordar si "Afinar resultados" está abierto (se vuelve a dibujar con cada búsqueda)
+    document.addEventListener('toggle', (e) => { if (e.target.id === 'breakdown-box') S.breakdownOpen = e.target.open; }, true);
 
     // Filtros: una sola copia que se mueve entre "Por vehículo" y "Limitar por vehículo"
     filtersEl = $('#filters-template').content.firstElementChild.cloneNode(true);
@@ -262,6 +284,9 @@
     $('#f-year', filtersEl).addEventListener('input', () => { markPending(); onYear(); });
     const onText = debounce(() => { S.f.text = $('#f-text', filtersEl).value; resetPage(); render(); }, 220);
     $('#f-text', filtersEl).addEventListener('input', () => { markPending(); onText(); });
+    [$('#f-year', filtersEl), $('#f-text', filtersEl)].forEach((inp) => inp.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); enterToResults(inp); }
+    }));
     $('#f-clear', filtersEl).addEventListener('click', clearFilters);
 
     // Acciones dentro de resultados, resumen y catálogo
@@ -269,7 +294,7 @@
       const part = e.target.closest('[data-part]');
       if (part) { e.preventDefault(); goPart(part.dataset.part); return; }
       const cp = e.target.closest('[data-copy]');
-      if (cp) { e.preventDefault(); copyText(cp.dataset.copy); return; }
+      if (cp) { e.preventDefault(); copyText(cp.dataset.copy, cp); return; }
       const set = e.target.closest('[data-set]');
       if (set) {
         e.preventDefault();
@@ -287,7 +312,14 @@
         return;
       }
       const act = e.target.closest('[data-action]');
-      if (act && act.dataset.action === 'clear-filters') { e.preventDefault(); clearFilters(); return; }
+      if (act) {
+        e.preventDefault();
+        const a = act.dataset.action;
+        if (a === 'clear-filters') clearFilters();
+        if (a === 'show-all') { S.vehAll = true; resetPage(); render(); goToResults(); }
+        if (a === 'include-noyear') { S.f.includeNoYear = true; applyStateToInputs(); resetPage(); render(); toast('Se incluyen las publicaciones sin años'); }
+        return;
+      }
       const pq = e.target.closest('[data-pubq]');
       if (pq) {
         e.preventDefault();
@@ -308,8 +340,19 @@
 
   function resetPage() { S.shown = CFG.PAGE_SIZE; }
 
+  /** Enter en un campo: aplica de inmediato y, si hay resultados, lleva a ellos. */
+  function enterToResults(inp) {
+    if (inp.id === 'q-pub') S.pubQ = inp.value;
+    if (inp.id === 'q-part') S.partQ = inp.value;
+    if (inp.id === 'f-text') S.f.text = inp.value;
+    if (inp.id === 'f-year') { const v = inp.value.trim(); S.f.year = /^\d{4}$/.test(v) ? Number(v) : null; }
+    resetPage(); render();
+    if (S.lastCount > 0) goToResults();
+  }
+
   function clearFilters() {
     const had = Core.activeFilterCount(S.f) || S.f.includeNoYear;
+    S.vehAll = false;
     S.f = Core.emptyFilters();
     applyStateToInputs(); resetPage(); render();
     if (had) toast('Filtros limpiados');
@@ -317,7 +360,7 @@
 
   function setMode(mode) {
     if (S.mode === mode) return;
-    S.mode = mode; resetPage(); applyStateToInputs(); render();
+    S.mode = mode; S.vehAll = false; resetPage(); applyStateToInputs(); render();
     const inp = mode === 'pub' ? $('#q-pub') : mode === 'part' ? $('#q-part') : null;
     if (inp && window.matchMedia('(min-width: 760px)').matches) inp.focus();
   }
@@ -349,7 +392,11 @@
     if ($('#f-text', filtersEl).value !== S.f.text) $('#f-text', filtersEl).value = S.f.text;
     $('#f-noyear', filtersEl).checked = !!S.f.includeNoYear;
     if (S.mode === 'part' && Core.activeFilterCount(S.f)) $('#part-refine').open = true;
+    // "Más filtros" se abre solo si alguno de sus campos está en uso
+    if (EXTRA_FIELDS.some((k) => (k === 'text' ? S.f.text.trim() : S.f[k])) || S.f.includeNoYear) $('#f-more', filtersEl).open = true;
   }
+
+  const EXTRA_FIELDS = ['clas', 'marcaAc', 'espAc', 'text'];
 
   /* ================================================================== */
   /* Estado en la URL (para compartir una búsqueda por enlace)           */
@@ -426,8 +473,14 @@
     $('#f-text', filtersEl).closest('.f').classList.toggle('active', !!S.f.text.trim());
 
     const n = Core.activeFilterCount(S.f);
-    $('#f-active', filtersEl).textContent = n ? plural(n, 'filtro activo', 'filtros activos') : 'Sin filtros activos';
+    const fa = $('#f-active', filtersEl);
+    fa.textContent = n ? plural(n, 'filtro activo', 'filtros activos') : 'Sin filtros activos';
+    fa.classList.toggle('has', !!n);
     $('#f-clear', filtersEl).disabled = !n && !S.f.includeNoYear;
+    const nExtra = EXTRA_FIELDS.filter((k) => (k === 'text' ? S.f.text.trim() : S.f[k])).length + (S.f.includeNoYear ? 1 : 0);
+    const mb = $('#f-more-count', filtersEl);
+    mb.hidden = !nExtra;
+    mb.textContent = nExtra ? plural(nExtra, 'activo', 'activos') : '';
     const badge = $('#part-refine-count');
     badge.hidden = !n;
     badge.textContent = n ? plural(n, 'filtro activo', 'filtros activos') : '';
@@ -442,7 +495,7 @@
     const res = $('#results');
     res.classList.remove('is-pending');
     if (!S.model) return;
-    const out = { summary: '', groups: [], hits: new Set(), empty: '' };
+    const out = { summary: '', groups: [], hits: new Set(), empty: '', hint: '' };
     if (S.mode === 'pub') renderPub(out);
     else if (S.mode === 'veh') renderVeh(out);
     else renderPart(out);
@@ -453,6 +506,44 @@
     const more = $('#more');
     more.hidden = out.groups.length <= S.shown;
     more.textContent = 'Mostrar más (' + intFmt.format(out.groups.length - visible.length) + ' restantes)';
+    S.lastCount = out.empty ? 0 : out.groups.length;
+    updateProgress(out);
+  }
+
+  /**
+   * Indicadores de paso y acción principal.
+   * Paso 2 se marca ✓ cuando hay un dato capturado; paso 3, cuando hay resultados.
+   * El botón principal dice cuántas publicaciones hay y lleva a ellas.
+   */
+  function updateProgress(out) {
+    const n = S.lastCount;
+    let started;
+    if (S.mode === 'pub') started = !!S.pubQ.trim();
+    else if (S.mode === 'part') started = !!S.partQ.trim();
+    else started = Core.activeFilterCount(S.f) > 0 || S.vehAll;
+
+    $$('.step-n[data-step="2"]').forEach((el) => el.classList.toggle('is-done', started));
+    $('.step-n[data-step="3"]').classList.toggle('is-done', n > 0);
+
+    const panel = $('#panel-' + S.mode);
+    const btn = $('[data-cta]', panel);
+    const hint = $('[data-cta-hint]', panel);
+    hint.className = 'cta-hint';
+    if (!started) {
+      btn.disabled = true;
+      btn.innerHTML = 'Ver resultados';
+      hint.textContent = S.mode === 'veh' ? 'Elige al menos un dato del vehículo.' : 'Escribe un dato para buscar.';
+    } else if (n > 0) {
+      btn.disabled = false;
+      btn.innerHTML = 'Ver ' + plural(n, 'publicación', 'publicaciones') + ' ' + icon('down');
+      hint.classList.add('is-ok');
+      hint.innerHTML = icon('check') + ' <b>' + plural(n, 'coincidencia', 'coincidencias') + '</b>';
+    } else {
+      btn.disabled = true;
+      btn.innerHTML = 'Sin resultados';
+      hint.classList.add('is-empty');
+      hint.textContent = out.hint || 'No hay coincidencias. Revisa el dato o quita algún filtro.';
+    }
   }
 
   function plural(n, s, p) { return intFmt.format(n) + ' ' + (n === 1 ? s : p); }
@@ -518,6 +609,7 @@
         '<span class="sum-sub">' + plural(out.groups.length, 'publicación contiene', 'publicaciones contienen') + ' “' + esc(q) + '”</span></div>';
       return;
     }
+    out.hint = 'No se encontró esa publicación.';
     out.empty = emptyBox('search', 'No se encontró “' + q + '”',
       'Revisa el número. Si la publicación es nueva, quizá aún no está capturada en el recetario.');
   }
@@ -526,15 +618,23 @@
   function renderVeh(out) {
     const all = S.model.records;
     updateFilterOptions(all);
+    const n = Core.activeFilterCount(S.f);
+    // Revelación progresiva: sin filtros no se muestra la lista completa, salvo que se pida.
+    if (!n && !S.vehAll) {
+      out.empty = emptyBox('car', 'Elige un dato del vehículo para empezar',
+        'Por ejemplo, la marca o el modelo. Los resultados aparecerán aquí y se irán reduciendo con cada dato que agregues.',
+        '<button type="button" class="btn btn-sm btn-quiet" data-action="show-all">Ver todo el recetario (' + intFmt.format(Core.groupRecords(all, S.model).length) + ')</button>');
+      return;
+    }
     const recs = Core.applyFilters(all, S.f);
     out.groups = Core.groupRecords(recs, S.model);
-    const n = Core.activeFilterCount(S.f);
-    let s = countHead(out.groups, recs, n ? '' : '<span class="sum-sub">Sin filtros: se muestra todo el recetario</span>');
+    let s = countHead(out.groups, recs, n ? '' : '<span class="sum-sub">Todo el recetario, sin filtros</span>');
     s += activeFiltersHTML('Filtrado por');
     s += noYearNote(all);
     if (recs.length) s += breakdownHTML(recs);
     out.summary = s;
     if (!recs.length) {
+      out.hint = 'Ninguna publicación cumple todos los filtros.';
       out.empty = emptyBox('car', 'Ninguna publicación cumple todos los filtros', 'Quita uno de los filtros marcados para ampliar la búsqueda.', clearFiltersBtn);
     }
   }
@@ -542,9 +642,9 @@
   function noYearNote(base) {
     const ex = Core.countNoYearExcluded(base, S.f);
     if (!ex) return '';
-    return noteHTML(plural(ex, 'publicación no tiene', 'publicaciones no tienen') +
-      ' años registrados (por ejemplo, aceites) y no aparece' + (ex === 1 ? '' : 'n') + ' al filtrar por año. ' +
-      'Marca “Incluir publicaciones sin años registrados” para verlas.');
+    return '<div class="note">' + icon('alert') + '<span>' + plural(ex, 'publicación no tiene', 'publicaciones no tienen') +
+      ' años registrados (por ejemplo, aceites) y no aparece' + (ex === 1 ? '' : 'n') + ' al filtrar por año.</span>' +
+      '<button type="button" class="btn btn-sm" data-action="include-noyear">Incluirlas</button></div>';
   }
 
   /* --- C. Por número de parte --- */
@@ -566,6 +666,7 @@
         ? '<p>¿Buscabas alguno de estos?</p><div class="chips">' +
           r.suggestions.map((c) => '<button type="button" class="chip" data-part="' + esc(c) + '"><span class="chip-code">' + esc(c) + '</span></button>').join('') + '</div>'
         : '';
+      out.hint = 'Ese código no existe en el recetario.';
       out.empty = emptyBox('search', (r.missing.length > 1 ? 'No existen ' : 'No existe ') + r.missing.join(', ') + ' en el recetario',
         r.suggestions.length ? '' : 'Revisa el código o elígelo en el catálogo.', sug);
       return;
@@ -587,6 +688,7 @@
     if (recs.length) s += breakdownHTML(recs);
     out.summary = s;
     if (!recs.length) {
+      out.hint = 'La pieza existe, pero no con esos filtros de vehículo.';
       out.empty = emptyBox('filter', 'Ninguna publicación con esta pieza cumple los filtros de vehículo',
         'La pieza sí existe en ' + plural(totalGroups, 'publicación', 'publicaciones') + '. Quita algún filtro para verlas.', clearFiltersBtn);
     }
@@ -608,7 +710,11 @@
           esc(v.label) + ' <small>' + v.count + '</small></button>').join('') +
         (sm.byVeh.length > top.length ? '<span class="sum-sub">y ' + (sm.byVeh.length - top.length) + ' más</span>' : '') + '</div>';
     }
-    return s;
+    if (!s) return '';
+    // Plegado por defecto: atajos útiles, pero no compiten con los resultados.
+    return '<details class="disclosure breakdown-box" id="breakdown-box"' + (S.breakdownOpen ? ' open' : '') + '>' +
+      '<summary>' + icon('chevron', 'chev') + '<span class="disclosure-title">Afinar por clasificación o vehículo</span></summary>' +
+      '<div class="disclosure-body">' + s + '</div></details>';
   }
 
   /* ================================================================== */
